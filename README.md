@@ -4,6 +4,10 @@ Commonly, the 22ms frame limit the maximum number of servos/channels to 9.
 
 Example:
 
+    #include <CPPM.h>
+    
+    // your code...
+    
     void setup(void)
     {
       CPPM.begin();
