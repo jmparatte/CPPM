@@ -32,3 +32,9 @@ Implementation has been extensively tested on a Orange R615X (6 channels) receiv
 Protect the input signal from glitch that can catch ICR1. Add a 1nF capacitor between Arduino pin 8 and GND and insert a 470ohms resistor between pin 8 and signal.
 
 The main page is http://jean-marc.paratte.ch/articles/arduino-cppm/
+
+Installation
+------------
+1. Download the ZIP file and expand it in the folder Documents/Arduino/libraries/CPPM. 
+2. Start or Restart the Arduino environment.
+3. Try the Monitor example.
