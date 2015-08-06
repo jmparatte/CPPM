@@ -1,5 +1,7 @@
 # CPPM Library for Arduino
 
+2015-08-06: Update in preparation...
+
 This library provides an interface for reading a CPPM signal delivered by a RC receiver like Orange R615X.
 Commonly, the 22ms frame limit the maximum number of servos/channels to 9.
 
