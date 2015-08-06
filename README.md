@@ -3,7 +3,7 @@
 2015-08-06: Update in preparation...
 
 This library provides an interface for reading a CPPM signal delivered by a RC receiver like Orange R615X.
-Commonly, the 22ms frame limit the maximum number of servos/channels to 9.
+Commonly, the 22ms frame limits the maximum number of servos/channels to 9.
 
 ### Example
 
@@ -20,44 +20,74 @@ Commonly, the 22ms frame limit the maximum number of servos/channels to 9.
     {
       if (CPPM.synchronized())
       {
-        int throttle = CPPM.read(CPPM.THRO);
+        int throttle = CPPM.read_us(CPPM.THRO);
         
         // do something funny...
       }
     }
 
-### 22ms CPPM frame
+### 22ms CPPM Frame
 
-![22ms CPPM frame](http://jean-marc.paratte.ch/wp-content/uploads/2015/03/cppm-frame.png)
+![22ms CPPM Frame](http://jean-marc.paratte.ch/wp-content/uploads/2015/08/NewFile1.jpg)
 ```
-Note 1: The trig is set on 1st rising edge of the CPPM frame.
-Note 2: The horizontal position is normally centered.
+22ms CPPM Frame
+Note 1: CPPM frame is the concatenation of 9 servo pulses and 1 gap pulse (Orange R920X receiver).
+Note 2: The T trig is set on the 1st falling edge after gap pulse (20ms left deviation).
 ```
 
-### 1520us CPPM pulse
-
-![1520us CPPM pulse](http://jean-marc.paratte.ch/wp-content/uploads/2015/03/cppm-pulse.png)
+![CPPM Frame Length](http://jean-marc.paratte.ch/wp-content/uploads/2015/08/NewFile0.jpg)
 ```
-Note 1: The trig origin is set on the rising edge of the CPPM pulse.
-Note 2: The horizontal position is 600us left (3 divisions).
+CPPM Frame Length
+Note 1: Cursor A is set on falling edge of CPPM frame (1st sync pulse, 1st CPPM pulse).
+Note 2: Cursor B is set on falling edge of next CPPM frame.
+Note 3: CPPM frame length is more precisely 21980us (Spektrum DX8 emitter - Orange R920X receiver).
+Note 4: Unsynchronized CPPM frame length is about 22120us (Orange R920X receiver).
+Note 5: Unsynchronized CPPM frame length can largely vary from one model/manufacter to another.
+```
+
+### 1520us CPPM Pulse
+
+![1520us CPPM Pulse](http://jean-marc.paratte.ch/wp-content/uploads/2015/08/NewFile3.jpg)
+```
+1520us CPPM Pulse
+Note 1: Cursor A is set on falling edge of sync pulse.
+Note 2: Cursor B is set on falling edge of next sync pulse.
+Note 3: Middle CPPM pulse width is more precisely 1510us (Orange R920X receiver).
+Note 4: Middle CPPM pulse width can largely vary from one model/manufacter to another.
+Note 5: +/-100% CPPM range pulse width is about +/-455us (Orange R920X receiver).
+Note 6: CPPM range pulse width can largely vary from one model/manufacter to another.
+```
+
+### CPPM Sync Pulse
+
+![CPPM Sync Pulse](http://jean-marc.paratte.ch/wp-content/uploads/2015/08/NewFile5.jpg)
+```
+CPPM Sync Pulse
+Note 1: Cursor A is set on falling edge of sync pulse.
+Note 2: Cursor B is set on rising edge of sync pulse.
+Note 3: CPPM sync pulse width is more precisely 136us (Orange R920X receiver).
+Note 4: CPPM sync pulse width can largely vary from one model/manufacter to another.
 ```
 
 ### Implementation
 
-This library works only on ATmega328 implementation of Arduino UNO, Duemillanove, Leonardo and similar. It uses the Timer1. So PWM `analogWrite()` on pin 9 and 10 are unavailable. The library `Servo` is not compatible because it also uses Timer1.
+This library works only on ATmega328 implementation of Arduino UNO, Duemillanove and similar, also Leonardo. It uses the 16bit Timer1. So PWM `analogWrite()` on pin 9 and 10 are unavailable. The library `Servo` is not compatible because it also uses Timer1.
 
-The CPPM signal is connected to the Arduino pin 8 named ICP1. In a future version, pin 9 OC1A and 10 OC1B will be 2 PPM/CPPM output signals. 
+The CPPM input signal is connected to the Arduino pin 8 named ICP1. A CPPM output signal is generated on pin 9 OC1A. At moment, pin 10 OC1B has no dedicated usage. 
 
-This implementation differs from https://github.com/claymation/CPPM in one significant point: the synchronization of each pulses is done on the rising edge of the CPPM signal. Another point is that edges of pulses are exactly catched by hardware counter ICR1 with a precision of 0.5 microsecond. TCNT1 counter is a true running counter and is never resetted by software.  
+This implementation differs from https://github.com/claymation/CPPM in one significant point: Edges of pulses are exactly catched by hardware counter ICR1 with a precision of 0.5 microsecond. TCNT1 counter is a true running counter and is never resetted by software.  
 
-Implementation has been extensively tested with an Orange R615X (6 channels) receiver and a Spektrum DX8 (DSM2/DSMX) transmitter. Older DX6i DSM2 or newer DX6i DSMX work similary.
+Implementation has been extensively tested with Orange R920X (9 channels) and Orange R615X (6 channels) receiver and a Spektrum DX8 transmitter. 
 
-Protect the input signal from glitch that can catch ICP1. Add a 1nF capacitor between ICP1 and GND and insert a 100ohms resistor in the CPPM signal. This is particulary necessary when high currents are switched (dc motors, etc...).
+Protect the CPPM input signal from glitches that can catch ICP1. Add a 1nF capacitor between ICP1 and GND and insert a 330ohms resistor in the CPPM signal. This is particulary necessary when high currents are switched (dc motors, etc...).
 
-The main page is http://jean-marc.paratte.ch/articles/arduino-cppm/ (in French)
+The main page is http://jean-marc.paratte.ch/articles/arduino-cppm/ (French language).
 
 ### Installation
 
-1. Download the ZIP file and expand it in the folder Documents/Arduino/libraries/CPPM. 
-2. Start or Restart the Arduino environment.
-3. Try the Monitor example.
+1. Download the ZIP file.
+2. Use the Arduino menu Sketch / Import Library / Add Library...
+3. Verify the expanded content in the folder Documents/Arduino/libraries/CPPM. 
+4. Restart the Arduino environment.
+5. Connect a receiver and try the Monitor example.
+

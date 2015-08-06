@@ -45,11 +45,71 @@
 
 #include <Arduino.h>
 
-#define CPPM_ICP1 8 // Input Capture Pin 1 of Timer1 is Arduino pin 8
+//------------------------------------------------------------------------------
+
+// all times are written with a granularity of 1us
+
+#define FRSKY_PULSE_SYNC 300
+
+#define R615X_FRAME_LENGTH 21980 // DX8-R615X 22ms frame length
+#define R615X_PULSE_CENTER 1504 // DX8-R615X center of pulse
+#define R615X_PULSE_C100PC 413 // DX8-R615X 100% centered stick mouvement
+#define R615X_PULSE_C125PC 516 // DX8-R615X 125% centered stick mouvement
+#define R615X_PULSE_C150PC 620 // DX8-R615X 150% centered stick mouvement
+#define R615X_PULSE_C200PC 826 // DX8-R615X 200% centered stick mouvement
+
+#define R615X_FRAME_NOTSYNC 22765 // R615X not synchronized +/-8us
+#define R615X_PULSE_SYNC 304 // R615X neg sync pulse starting PPM pulse
+#define R615X_GAP_SYNC 312 // R615X neg sync pulse starting GAP pulse
+
+#define R920X_FRAME_LENGTH 21980 // DX8-R920X 22ms frame length
+#define R920X_PULSE_CENTER 1509 // DX8-R920X center of pulse
+#define R920X_PULSE_C100PC 455 // DX8-R920X 100% centered stick mouvement
+#define R920X_PULSE_C125PC 568 // DX8-R920X 125% centered stick mouvement
+#define R920X_PULSE_C150PC 682 // DX8-R920X 150% centered stick mouvement
+#define R920X_PULSE_C200PC 909 // DX8-R920X 200% centered stick mouvement
+
+#define R920X_FRAME_NOTSYNC 22121 // R920X not synchronized +/-2us
+#define R920X_PULSE_SYNC 138 // R920X neg sync pulse starting PPM pulse
+#define R920X_GAP_SYNC 138 // R920X neg sync pulse starting GAP pulse
+
+#define HXT900_DEGREE 11 // HXT900 9gr servo [us/°] (+/-30° standard deviation, +/-60° extended deviation)
+
+//------------------------------------------------------------------------------
+
+#define CPPM_PULSE_SYNC_MIN_FLOOR CPPM_T_floor(138 - 38) //(FRSKY_PULSE_SYNC - 50) //10)
+#define CPPM_PULSE_SYNC_MAX_CEIL CPPM_T_ceil(312 + 88) //(FRSKY_PULSE_SYNC + 100) //50) // check sync width... (FRSKY_PULSE_SYNC+20) is too short with R615X
+
+//#define CPPM_FRAME_NOTSYNC_MINUS_PULSE_SYNC_CEIL CPPM_T_ceil(R615X_FRAME_NOTSYNC - FRSKY_PULSE_SYNC) // could be a stange frame if wait so long !
+//#define CPPM_FRAME_NOTSYNC_CEIL CPPM_T_ceil(R615X_FRAME_NOTSYNC) // 2% max oscillator error
+#define CPPM_FRAME_NOTSYNC_CEIL CPPM_T_ceil(22765 + 135) //(R615X_FRAME_NOTSYNC + 100) // 2% max oscillator error
+
+#define CPPM_PULSE_CENTER_PLUS_C200PC_CEIL CPPM_T_ceil(1500 + 909 + 81) //(R615X_PULSE_CENTER + R615X_PULSE_C200PC) // middle stick+200%
+#define CPPM_PULSE_CENTER_MINUS_C200PC_FLOOR CPPM_T_floor(1500 - 909 - 81) //(1500 (R615X_PULSE_CENTER - R615X_PULSE_C200PC) // too short servo pulse (middle stick-200%) ?
+
+#define CPPM_FRAME_LENGTH_FLOOR CPPM_T_floor(21980 - 980) //(R615X_FRAME_LENGTH) // frame length too short ?
 
 #define CPPM_MSERVO 9 // 9 servos maximum in a 22ms frame
 
-// all times are written with a granularity of 0.5us (16MHz / 8)
+enum {CPPM_AILE, CPPM_ELEV, CPPM_THRO, CPPM_RUDD, CPPM_GEAR, CPPM_AUX1, CPPM_AUX2, CPPM_AUX3, CPPM_AUX4};
+// standard definitions of Spektrum receivers (AR6200, R615X, R920X,...)
+
+//------------------------------------------------------------------------------
+
+#define CPPM_T_err(t) (2*((long)t)/100) // +/-2% oscillator error (ATtiny85) of stick error (DX8)
+
+#define CPPM_T_mul 2
+#define CPPM_T_div 1
+#define CPPM_T_ceil(t) ((CPPM_T_mul*((long)t+CPPM_T_err(t))+(CPPM_T_div-1))/CPPM_T_div) // round up
+#define CPPM_T_round(t) ((CPPM_T_mul*(long)t+(CPPM_T_div-1)/2)/CPPM_T_div) // round
+#define CPPM_T_floor(t) (CPPM_T_mul*((long)t-CPPM_T_err(t))/CPPM_T_div) // round down
+
+//------------------------------------------------------------------------------
+
+#define CPPM_ICP1 8 // Input Capture Pin of Arduino UNO is pin 8 - ICP1 (Atmega328 PB0)
+#define CPPM_OC1A 9 // Output Compare Pin of Arduino UNO is pin 9 - OC1A (Atmega328 PB1)
+
+//------------------------------------------------------------------------------
 
 class CPPM_Class
 {
@@ -57,35 +117,54 @@ class CPPM_Class
 
 	public:
 
-		enum servo_names {AILE, ELEV, THRO, RUDD, GEAR, AUX1}; // standard definitions of some receivers (AR6200, R615X, ...)
-
-		uint8_t ovf; // count of overflows (maximum 2)
 		uint8_t state; // state of synchronization: 0=no signal or errored, 1=start frame, 2=synchronized
 		uint8_t errors; // count of frame errors
-		uint8_t berrors; // bits of errors
 
-		uint16_t sync0; // time of falling edge of synch pulse (start)
-		uint16_t sync1; // time of rising edge of synch pulse (end => start pulse)
-		uint16_t sync2; // width of servo pulse (including ending synch pulse)
-		uint16_t sync3; // width of synch pulse
-		uint16_t sync4; // time of start of 1st pulse
+		uint16_t time0; // start time of synch pulse (falling edge)
+		uint16_t time1; // end time of synch pulse (rising edge)
+		uint16_t sync2; // width of synch pulse
+		uint16_t puls3; // width of servo pulse (including starting synch pulse)
+		uint16_t cppm4; // length of CPPM frame
+		uint16_t time5; // start time of CPPM frame (start time of 1st sync pulse)
+
+		bool _received; // +2015-02-05
+		bool _sent;		// +2015-06-23
 
 		uint8_t iservo; // index servo
 		uint8_t nservo; // found servos
-		uint16_t servos2[CPPM_MSERVO + 2]; // servo pulse width
-		uint16_t servos3[CPPM_MSERVO + 2]; // synch pulse width (included at end of servo pulse)
-		// the 2 extra servos are the last gap pulse and the total frame size
+		uint8_t jservo; // next index servo
+//		uint8_t kservo; // next mask servo
+
+		uint16_t _sync2[CPPM_MSERVO + 2]; // width of synch pulses
+		uint16_t _puls3[CPPM_MSERVO + 2]; // width of servo pulses
+		// the 2 extra servos are the gap pulse and the total frame length.
+
+		int8_t _puls3i8[CPPM_MSERVO + 2]; // width of servo pulses
+
+		uint8_t oservo; // cppm output servo index
+		uint16_t oservos[CPPM_MSERVO]; // cppm output servo pulse width
 
 		void begin(void);
 
 		void end(void);
 
+		void cycle(void);
+
 		bool synchronized(void);
+
+		bool received(void); // +2015-02-05
+
+		bool sent(void); // +2015-06-23
 
 		int read(int n);
 
-		operator bool();
+		void write(int n, int v); // +2015-04-06
 
+		int read_us(int n);
+
+		void write_us(int n, int v); // +2015-04-06
+
+		operator bool();
 };
 
 extern CPPM_Class CPPM;
