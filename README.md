@@ -16,26 +16,26 @@ CHANGED: The synchronization pulse starts on falling edge.
 
 ### Example
 
-  #include <CPPM.h>
+    #include <CPPM.h>
   
-  // your code...
+    // your code...
   
-  void setup(void)
-  {
-    CPPM.begin();
-  }
-  
-  void loop(void)
-  {
-    CPPM.cycle(); // update some variables and check timeouts...
-    
-    if (CPPM.synchronized())
+    void setup(void)
     {
-      int throttle = CPPM.read_us(CPPM.THRO);
-      
-      // do something funny...
+      CPPM.begin();
     }
-  }
+  
+    void loop(void)
+    {
+      CPPM.cycle(); // update some variables and check timeouts...
+    
+      if (CPPM.synchronized())
+      {
+        int throttle = CPPM.read_us(CPPM.THRO);
+      
+        // do something funny...
+      }
+    }
 
 ### 22ms CPPM Frame
 
