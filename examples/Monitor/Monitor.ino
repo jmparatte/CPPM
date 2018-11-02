@@ -5,6 +5,7 @@ void cppm_cycle(void)
 {
 	if (CPPM.synchronized())
 	{
+        uint32_t previous = micros();
 //		// good for DX8-R615X
 //		int aile = (CPPM.read(CPPM_AILE) - 1500*2) / 8 * 125 / 128; // aile -100% .. +100%
 //		int elev = (CPPM.read(CPPM_ELEV) - 1500*2) / 8 * 125 / 128; // elevator -100% .. +100%
@@ -19,13 +20,20 @@ void cppm_cycle(void)
 		int rudd = CPPM.read_us(CPPM_RUDD) - 1500; // rudder
 		int gear = CPPM.read_us(CPPM_GEAR) - 1500; // gear
 		int aux1 = CPPM.read_us(CPPM_AUX1) - 1500; // flap
+        int aux2 = CPPM.read_us(CPPM_AUX2) - 1500; // flap
+        int aux3 = CPPM.read_us(CPPM_AUX3) - 1500; // flap
 
-		Serial.print(aile); Serial.print(", ");
-		Serial.print(elev); Serial.print(", ");
-		Serial.print(thro); Serial.print(", ");
-		Serial.print(rudd); Serial.print(", ");
-		Serial.print(gear); Serial.print(", ");
-		Serial.print(aux1); Serial.print("\n");
+        uint32_t now = micros();
+        Serial.print("Cycle time: " + (String)(now - previous) + "\t| ");
+
+		Serial.print(aile); Serial.print(",\t");
+		Serial.print(elev); Serial.print(",\t");
+		Serial.print(thro); Serial.print(",\t");
+		Serial.print(rudd); Serial.print(",\t");
+		Serial.print(gear); Serial.print(",\t");
+        Serial.print(aux1); Serial.print(",\t");
+        Serial.print(aux2); Serial.print(",\t");
+		Serial.print(aux3); Serial.print("\n");
 		Serial.flush();
 	}
 	else
