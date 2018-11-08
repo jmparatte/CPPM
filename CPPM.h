@@ -106,8 +106,13 @@ enum {CPPM_AILE, CPPM_ELEV, CPPM_THRO, CPPM_RUDD, CPPM_GEAR, CPPM_AUX1, CPPM_AUX
 
 //------------------------------------------------------------------------------
 
+#ifdef __AVR_ATmega32U4__
+#define CPPM_ICP1 4 // Input Capture Pin of Arduino UNO is pin 4 - ICP1 (Atmega328 PB0)
+#define CPPM_OC1A 9 // Output Compare Pin of Arduino UNO is pin 9 - OC1A (Atmega328 PB1)
+#else
 #define CPPM_ICP1 8 // Input Capture Pin of Arduino UNO is pin 8 - ICP1 (Atmega328 PB0)
 #define CPPM_OC1A 9 // Output Compare Pin of Arduino UNO is pin 9 - OC1A (Atmega328 PB1)
+#endif
 
 //------------------------------------------------------------------------------
 
